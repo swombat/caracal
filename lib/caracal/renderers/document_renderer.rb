@@ -351,8 +351,9 @@ module Caracal
           end
 
           rowspan_hash = {}
-          model.rows.each do |row|
+          model.rows.each.with_index do |row, row_index|
             xml['w'].tr do
+              render_table_row_properties(xml, model, row_index)
               tc_index = 0
               row.each do |tc|
                 xml['w'].tc do
@@ -389,6 +390,12 @@ module Caracal
               end
             end
           end
+        end
+      end
+
+      def render_table_row_properties(xml, model, index)
+        xml['w'].trPr do
+          xml['w'].tblHeader if index < model.table_header_rows
         end
       end
 

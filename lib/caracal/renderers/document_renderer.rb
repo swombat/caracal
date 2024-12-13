@@ -312,8 +312,8 @@ module Caracal
           xml['w'].tblPr do
             xml['w'].tblStyle({ 'w:val' => 'DefaultTable' })
             xml['w'].bidiVisual({ 'w:val' => '0' })
-            xml['w'].tblW({ 'w:w'   => model.table_width.to_f, 'w:type' => 'dxa' })
-            xml['w'].tblInd({ 'w:w'   => '0.0', 'w:type' => 'dxa' })
+            xml['w'].tblW({ 'w:w'   => model.table_width.to_i, 'w:type' => 'dxa' })
+            xml['w'].tblInd({ 'w:w'   => '0', 'w:type' => 'dxa' })
             xml['w'].jc({ 'w:val' => model.table_align })
             unless borders.empty?
               xml['w'].tblBorders do
@@ -338,28 +338,37 @@ module Caracal
             end.flatten
 
             column_widths.each do |width|
-              xml['w'].gridCol({ 'w:w' => width })
+              xml['w'].gridCol({ 'w:w' => width.to_i })
             end
 
-            xml['w'].tblGridChange({ 'w:id' => '0' }) do
-              xml['w'].tblGrid do
-                column_widths.each do |width|
-                  xml['w'].gridCol({ 'w:w' => width })
-                end
-              end
-            end
+            # Appears unnecessary
+            # xml['w'].tblGridChange({ 'w:id' => '0' }) do
+            #   xml['w'].tblGrid do
+            #     column_widths.each do |width|
+            #       xml['w'].gridCol({ 'w:w' => width })
+            #     end
+            #   end
+            # end
+
           end
 
           rowspan_hash = {}
+
+          column_widths = model.table_column_widths
+          column_widths ||= model.rows.first.map do |tc|
+            [tc.cell_width] * (tc.cell_colspan || 1)
+          end.flatten
+
           model.rows.each.with_index do |row, row_index|
             xml['w'].tr do
               render_table_row_properties(xml, model, row_index)
               tc_index = 0
-              row.each do |tc|
+              row.each_with_index do |tc, col_index|
                 xml['w'].tc do
                   xml['w'].tcPr do
                     xml['w'].shd({ 'w:fill' => tc.cell_background })
                     xml['w'].vAlign({ 'w:val' => tc.cell_vertical_align })
+                    xml['w'].tcW({ 'w:w' => column_widths[col_index] })
 
                     # applying rowspan
                     if tc.cell_rowspan && tc.cell_rowspan > 0
@@ -375,7 +384,7 @@ module Caracal
 
                     xml['w'].tcMar do
                       %w(top left bottom right).each do |d|
-                        xml['w'].method_missing "#{ d }", { 'w:w' => tc.send("cell_margin_#{ d }").to_f, 'w:type' => 'dxa' }
+                        xml['w'].method_missing "#{ d }", { 'w:w' => tc.send("cell_margin_#{ d }").to_i, 'w:type' => 'dxa' }
                       end
                     end
                   end
